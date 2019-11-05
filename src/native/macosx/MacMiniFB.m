@@ -112,8 +112,6 @@ static bool create_shaders() {
 		return false;
 	}
 
-	NSLog(@"Names %@", [g_library functionNames]);
-
 	g_library = library;
 
 	id<MTLFunction> vertex_shader_func = [g_library newFunctionWithName:@"vertFunc"];
@@ -184,14 +182,17 @@ void* mfb_open(const char* name, int width, int height, uint32_t flags, int scal
 	if (flags & WINDOW_TITLE)
 		styles |= NSWindowStyleMaskTitled;
 
-	NSRect rectangle = NSMakeRect(0, 0, width * scale, (height * scale));
+    NSRect rectangle = (scale < 0)
+        ? NSMakeRect(0, 0, width, height)
+        : NSMakeRect(0, 0, width * scale, (height * scale));
 
 	OSXWindow* window = [[OSXWindow alloc] initWithContentRect:rectangle styleMask:styles backing:NSBackingStoreBuffered defer:NO];
 
 	if (!window)
 		return 0;
 
-	window->draw_buffer = malloc((width * height * 4) * 8);
+    int s = (scale < 0) ? -scale : 1;
+	window->draw_buffer = malloc(s * s * width * height * 4);
 
 	if (!window->draw_buffer)
 		return 0;
@@ -208,8 +209,8 @@ void* mfb_open(const char* name, int width, int height, uint32_t flags, int scal
 	textureDescriptor.pixelFormat = MTLPixelFormatBGRA8Unorm;
 
 	// Set the pixel dimensions of the texture
-	textureDescriptor.width = width;
-	textureDescriptor.height = height;
+	textureDescriptor.width = width * s;
+	textureDescriptor.height = height * s;
 
 	// Create the texture from the device by using the descriptor
 
@@ -220,8 +221,8 @@ void* mfb_open(const char* name, int width, int height, uint32_t flags, int scal
 	// Used for syncing the CPU and GPU
 	viewController->m_semaphore = dispatch_semaphore_create(MaxBuffersInFlight);
     viewController->m_draw_buffer = window->draw_buffer;
-    viewController->m_width = width;
-    viewController->m_height = height;
+    viewController->m_width = width * s;
+    viewController->m_height = height * s;
     viewController->m_delayed_delete_count = 0;
 
     MTKView* view = [[MTKView alloc] initWithFrame:rectangle];
@@ -455,11 +456,12 @@ int mfb_update_with_buffer(void* window, void* buffer)
 {
 	OSXWindow* win = (OSXWindow*)window;
 
-	if (win->shared_data) {
+    int s = (win->scale < 0) ? -(win->scale) : 1;
+	if (0 && win->shared_data) {
 		SharedData* shared_data = (SharedData*)win->shared_data;
 		memcpy(win->draw_buffer, buffer, shared_data->width * shared_data->height * 4);
 	} else {
-		memcpy(win->draw_buffer, buffer, win->width * win->height * 4);
+		memcpy(win->draw_buffer, buffer, s * s * win->width * win->height * 4);
 	}
 
 	int state = generic_update(win);

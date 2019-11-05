@@ -181,12 +181,6 @@
 	if (childContentView)
 		[childContentView removeFromSuperview];
 
-	printf("osxwindow: setContentFrameView %p\n", frameView);
-	//printf("osxwindow: setting controller %p\n", view_controller);
-	//frameView->m_view_controller = view_controller;
-
-	//NSRect t = [self contentRectForFrameRect:bounds];
-
 	childContentView = aView;
 	[childContentView setFrame:[self contentRectForFrameRect:bounds]];
 	[childContentView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
